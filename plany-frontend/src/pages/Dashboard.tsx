@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, CheckCircle2, XCircle, Clock, ChevronDown, MapPin, Printer } from 'lucide-react';
+import { Search, Filter, CheckCircle2, XCircle, Clock, ChevronDown, MapPin, Printer, RefreshCw } from 'lucide-react';
 import { listingService, Listing } from '../services/listingService';
 
 const getStatusColor = (status: string) => {
@@ -23,6 +23,9 @@ const Dashboard = () => {
 
   // Search filter simple state
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Apify Sync state
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch data on mount
   useEffect(() => {
@@ -48,6 +51,30 @@ const Dashboard = () => {
     }
   };
 
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      setError(null);
+      // Hardcoding default council=1 for scaffold demonstration
+      const councilId = 1; 
+      
+      // Step 1: Trigger the scrape actor
+      const triggerRes = await listingService.triggerScrape(councilId);
+      
+      // Step 2: Since it's a simulated or fast run, immediately process the resultant dataset
+      await listingService.processScrape(councilId, triggerRes.runId);
+      
+      // Step 3: Refresh the dashboard Grid
+      await fetchListings();
+      
+    } catch (err: any) {
+      console.error("Sync failed", err);
+      setError("Failed to sync data from the Apify Scraper.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const toggleSelection = (id: number) => {
     setSelectedListings(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
@@ -65,6 +92,14 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="px-5 py-2.5 bg-white text-brand-600 font-medium rounded-xl border border-brand-200 shadow-sm transition-all hover:bg-brand-50 hover:border-brand-300 disabled:opacity-50 flex items-center gap-2"
+          >
+            <RefreshCw size={18} className={isSyncing ? "animate-spin text-brand-500" : "text-brand-500"} />
+            {isSyncing ? "Syncing..." : "Sync Data"}
+          </button>
           <button 
             disabled={selectedListings.length === 0}
             className="px-5 py-2.5 bg-white text-slate-700 font-medium rounded-xl border border-slate-200 shadow-sm transition-all hover:bg-slate-50 hover:border-brand-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 group"

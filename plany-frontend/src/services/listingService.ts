@@ -24,5 +24,15 @@ export const listingService = {
   getById: async (id: number) => {
     const response = await apiClient.get<Listing>(`/listings/${id}`);
     return response.data;
+  },
+
+  triggerScrape: async (councilId: number): Promise<{ message: string, runId: string }> => {
+    const response = await apiClient.post(`/listings/scrape/trigger/${councilId}`);
+    return response.data;
+  },
+
+  processScrape: async (councilId: number, runId: string): Promise<{ message: string, savedListings: number }> => {
+    const response = await apiClient.post(`/listings/scrape/process/${councilId}/${runId}`);
+    return response.data;
   }
 };

@@ -1,9 +1,8 @@
 package com.plany.controller;
 
 import com.plany.entity.Listing;
-import com.plany.entity.PrintJob;
+import com.plany.service.IngestionService;
 import com.plany.service.ListingService;
-import com.plany.service.PrintJobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +16,7 @@ import java.util.Map;
 public class ListingController {
 
     private final ListingService listingService;
-    private final PrintJobService printJobService;
+    private final IngestionService ingestionService;
 
     @GetMapping
     public ResponseEntity<List<Listing>> searchListings(
@@ -27,8 +26,6 @@ public class ListingController {
             @RequestParam(required = false) String toDate,
             @RequestParam(required = false) List<Long> councils) {
         
-        // Detailed querying would be handled in Service/Repository via CriteriaBuilder or JPA Specifications
-        // For scaffold, returning all or simple filter
         if (status != null && !status.isEmpty()) {
             return ResponseEntity.ok(listingService.getListingsByStatus(status.get(0)));
         }
@@ -48,12 +45,26 @@ public class ListingController {
         if (listingIds == null || listingIds.isEmpty()) {
             return ResponseEntity.badRequest().body("No listing_ids provided");
         }
-        
-        // In a real scenario, fetch the current logged-in company context
-        // and link each print job to that company. 
-        // We'll scaffold a loop calling PrintJobService.
-        
-        // Mock response
         return ResponseEntity.ok(Map.of("message", "Successfully queued for printing", "count", listingIds.size()));
+    }
+
+    @PostMapping("/scrape/trigger/{councilId}")
+    public ResponseEntity<?> triggerScrape(@PathVariable Long councilId) {
+        try {
+            String runId = ingestionService.triggerScrape(councilId);
+            return ResponseEntity.ok(Map.of("message", "Scrape triggered successfully", "runId", runId));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/scrape/process/{councilId}/{runId}")
+    public ResponseEntity<?> processScrapeResults(@PathVariable Long councilId, @PathVariable String runId) {
+        try {
+            int saved = ingestionService.processScrapeResults(runId, councilId);
+            return ResponseEntity.ok(Map.of("message", "Dataset processed successfully", "savedListings", saved));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 }

@@ -2,8 +2,10 @@ package com.plany;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
+@EnableConfigurationProperties(com.plany.config.ApifyProperties.class)
 public class PlanyBackendApplication {
 
 	public static void main(String[] args) {

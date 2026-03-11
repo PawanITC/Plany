@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface ListingRepository extends JpaRepository<Listing, Long> {
     Optional<Listing> findByCouncilIdAndReferenceNumber(Long councilId, String referenceNumber);
     List<Listing> findByStatus(String status);
+    boolean existsByReferenceNumber(String referenceNumber);
 }
