@@ -1,26 +1,52 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, CheckCircle2, XCircle, Clock, ChevronDown, MapPin, Printer } from 'lucide-react';
-
-const DUMMY_LISTINGS = [
-  { id: 1, ref: '26/10058', council: 'New Forest', status: 'Granted', address: 'MARL COTTAGE, MARL LANE, FORDINGBRIDGE SP6 1JR', desc: '2no. outbuildings for use as garden office and gym', date: '05/03/2026' },
-  { id: 2, ref: '25/02582/HOU', council: 'Hart', status: 'Pending', address: '34 Cove Road Fleet Hampshire GU51 2RN', desc: 'Erection of a detached outbuilding', date: '04/03/2026' },
-  { id: 3, ref: '26/00100/LBC', council: 'Chichester', status: 'Refused', address: 'Herons Farm Village Road Kirdford Billingshurst', desc: 'Replacement and relocation of existing swimming pool.', date: '06/03/2026' },
-  { id: 4, ref: '26/01293/FUL', council: 'Camden', status: 'Withdrawn', address: '12 Bloomsbury Square, London, WC1A 2LP', desc: 'Change of use from office to residential.', date: '01/03/2026' },
-];
+import { listingService, Listing } from '../services/listingService';
 
 const getStatusColor = (status: string) => {
-  switch(status) {
-    case 'Granted': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-    case 'Pending': return 'bg-amber-100 text-amber-700 border-amber-200';
-    case 'Refused': return 'bg-rose-100 text-rose-700 border-rose-200';
-    case 'Withdrawn': return 'bg-slate-100 text-slate-700 border-slate-200';
-    default: return 'bg-slate-100 text-slate-700 border-slate-200';
-  }
+  if (!status) return 'bg-slate-100 text-slate-700 border-slate-200';
+  const s = status.toLowerCase();
+  if (s.includes('granted') || s === 'approved') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  if (s.includes('pending') || s === 'processing') return 'bg-amber-100 text-amber-700 border-amber-200';
+  if (s.includes('refused') || s === 'denied') return 'bg-rose-100 text-rose-700 border-rose-200';
+  if (s.includes('withdrawn')) return 'bg-slate-100 text-slate-700 border-slate-200';
+  return 'bg-slate-100 text-slate-700 border-slate-200';
 };
 
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedListings, setSelectedListings] = useState<number[]>([]);
+  
+  // Data state
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Search filter simple state
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchListings();
+  }, []);
+
+  const fetchListings = async (query?: { keyword?: string; status?: string }) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      let data;
+      if (query && (query.keyword || query.status)) {
+         data = await listingService.search(query);
+      } else {
+         data = await listingService.getAll();
+      }
+      setListings(data);
+    } catch (err: any) {
+      console.error("Failed to load listings", err);
+      setError("Unable to connect to the Plany backend. Please ensure the server is running.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleSelection = (id: number) => {
     setSelectedListings(prev => 
@@ -67,37 +93,56 @@ const Dashboard = () => {
           ))}
         </div>
         <div className="text-sm text-slate-500 font-medium hidden sm:block">
-          Showing <strong className="text-slate-800">5166</strong> results
+          Showing <strong className="text-slate-800">{listings.length}</strong> results
         </div>
       </div>
 
-      {/* Grid */}
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-6 py-4 rounded-xl mb-6 flex items-center gap-3">
+           <XCircle size={20} className="text-rose-500" />
+           {error}
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="glass-panel rounded-2xl p-8 min-h-[300px] flex items-center justify-center">
+            <div className="animate-pulse flex flex-col items-center">
+                <div className="w-12 h-12 bg-brand-100 rounded-full mb-4 flex items-center justify-center">
+                   <div className="w-6 h-6 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <p className="text-slate-500 font-medium tracking-wide">Connecting to API Gateway Serverless Backend...</p>
+            </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {DUMMY_LISTINGS.map((listing, i) => (
+        {listings.length === 0 && !error && (
+          <div className="col-span-2 text-center py-12 text-slate-400 font-medium">No listings found.</div>
+        )}
+        {listings.map((listing, i) => (
           <div 
             key={listing.id} 
-            className={`glass-panel rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group relative cursor-pointer border ${selectedListings.includes(listing.id) ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-white/50 hover:border-brand-200'}`}
+            className={`glass-panel rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 group relative cursor-pointer border flex flex-col h-full ${selectedListings.includes(listing.id) ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-white/50 hover:border-brand-200'}`}
             onClick={() => toggleSelection(listing.id)}
             style={{ animationDelay: (i * 100) + 'ms' }}
           >
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="font-bold text-slate-800 text-lg mb-1 group-hover:text-brand-600 transition-colors line-clamp-1">{listing.address}</h3>
-                <p className="text-sm text-slate-500 font-medium">{listing.council}: <span className="text-slate-700">{listing.ref}</span></p>
+                <p className="text-sm text-slate-500 font-medium">{listing.council?.name || 'Unknown Council'}: <span className="text-slate-700">{listing.referenceNumber}</span></p>
               </div>
               <div className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(listing.status)}`}>
-                {listing.status}
+                {listing.status || 'Unknown'}
               </div>
             </div>
             
-            <p className="text-slate-600 mb-6 line-clamp-2 text-sm">
-              {listing.desc}
+            <p className="text-slate-600 mb-6 line-clamp-2 text-sm flex-1">
+              {listing.description}
             </p>
             
             <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
               <div className="flex items-center gap-2 text-slate-400 text-sm font-medium">
                 <Clock size={16} />
-                Decision: {listing.date}
+                Decision: {listing.decisionDate ? new Date(listing.decisionDate).toLocaleDateString() : 'N/A'}
               </div>
               
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedListings.includes(listing.id) ? 'bg-brand-500 border-brand-500' : 'border-slate-300'}`}>
@@ -107,6 +152,7 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+      )}
 
       {/* Search Modal */}
       {isModalOpen && (
@@ -125,7 +171,19 @@ const Dashboard = () => {
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Search Terms</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input type="text" placeholder="Comma separated terms e.g. rear extension, kitchen" className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-colors" />
+                  <input 
+                    type="text" 
+                    placeholder="Comma separated terms e.g. rear extension, kitchen" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-colors"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setIsModalOpen(false);
+                        fetchListings({ keyword: searchTerm });
+                      }
+                    }}
+                  />
                 </div>
               </div>
               
@@ -165,7 +223,15 @@ const Dashboard = () => {
               <button className="px-5 py-2.5 text-slate-600 font-semibold hover:bg-slate-200/50 rounded-xl transition-colors">History</button>
               <div className="flex gap-3">
                 <button onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-100 transition-colors">Close</button>
-                <button className="px-8 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/30 transition-colors">Search</button>
+                <button 
+                  onClick={() => {
+                     setIsModalOpen(false);
+                     fetchListings({ keyword: searchTerm });
+                  }}
+                  className="px-8 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/30 transition-colors"
+                >
+                  Search
+                </button>
               </div>
             </div>
           </div>

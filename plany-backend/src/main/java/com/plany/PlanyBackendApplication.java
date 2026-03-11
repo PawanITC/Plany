@@ -1,4 +1,4 @@
-package com.plany.plany_backend;
+package com.plany;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
