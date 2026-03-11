@@ -1,0 +1,43 @@
+# IDEs, Editors, and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Java & Spring Boot (Backend)
+plany-backend/target/
+plany-backend/bin/
+plany-backend/.settings/
+plany-backend/.classpath
+plany-backend/.project
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# Node.js, Vite & React (Frontend)
+plany-frontend/node_modules/
+plany-frontend/dist/
+plany-frontend/dist-ssr/
+plany-frontend/*.local
+plany-frontend/npm-debug.log*
+plany-frontend/yarn-debug.log*
+plany-frontend/yarn-error.log*
+plany-frontend/.eslintcache
+plany-frontend/.vite/
+
+# Generic Dependencies and Build Outputs
+node_modules/
+build/
+target/
+dist/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
